@@ -1,15 +1,40 @@
 local GameHUD = require("cet-kit/GameHUD")
 
 local styleRankMax = 6
-local basePercentageIncrease = 5
+local basePercentageIncrease = 15
+local styleTitles = {
+    "Dull",
+    "Competent",
+    "Badass",
+    "Amazing",
+    "Super",
+    "Shmoovin'",
+    "SMOKIN' SEXY STYLE"
+}
+
+local styleMessages = {
+    "You've done poorly",
+    "You've done OK",
+    "You've done well",
+    "You've done great",
+    "You've done incredible",
+    "You've done absolutely grand",
+    "You're a beast"
+}
+
+StyleRank = {
+    rank = 0,
+    title = styleTitles[1],
+    message = styleMessages[1]
+}
 
 StylishCombat = {
     description = "Stylish combat meter",
     displayStyleMeter = false,
-    styleRank = 0,
     styleRankPercentage = 0,
     repetitionModifier = 1,
-    actionModifier = 1
+    actionModifier = 1,
+    styleRank = StyleRank
 }
 
 function StylishCombat:new()
@@ -18,18 +43,6 @@ function StylishCombat:new()
 
         GameHUD.Initialize()
 
-        -- local message = SimpleScreenMessage.new()
-        -- message.message = "Message test"
-        -- message.isShown = true
-
-        -- local blackboardDefs = Game.GetAllBlackboardDefs()
-        -- local blackboardUI = Game.GetBlackboardSystem():Get(blackboardDefs.UI_HUDProgressBar)
-        -- blackboardUI:SetVariant(
-        --     blackboardDefs.UI_HUDProgressBar.Active,
-        --     ToVariant(message),
-        --     true
-        -- )
-
         Observe('PlayerPuppet', 'OnCombatStateChanged', function(self, newState)
             if newState == 1 then
                 StylishCombat.displayStyleMeter = true
@@ -37,38 +50,15 @@ function StylishCombat:new()
             end
 
             if StylishCombat.displayStyleMeter and newState == 2 then
-                StylishCombat.displayStyleMeter = false
-                local message = "You've done poorly"
+                StylishCombat:resetStyleMeter()
+                StylishCombat:resetRank()
 
-                if StylishCombat.styleRank == 1 then
-                    message = "You've done OK"
-                end
-    
-                if StylishCombat.styleRank == 2 then
-                    message = "You've done well"
-                end
-    
-                if StylishCombat.styleRank == 3 then
-                    message = "You've done great"
-                end
-    
-                if StylishCombat.styleRank == 4 then
-                    message = "You've done amazing"
-                end
-    
-                if StylishCombat.styleRank == 5 then
-                    message = "You've done absolutely grand"
-                end
-    
-                if StylishCombat.styleRank == 6 then
-                    message = "You're a beast"
-                end
-
-                GameHUD.ShowWarning(message, 5)
+                GameHUD.ShowWarning(StylishCombat.styleRank.message, 5)
             end
 
             if newState ~= 1 then
-                StylishCombat.displayStyleMeter = false
+                StylishCombat:resetStyleMeter()
+                StylishCombat:resetRank()
             end
         end)
 
@@ -77,7 +67,8 @@ function StylishCombat:new()
                 GameHUD.ShowWarning("You've done poorly", 2) -- Should have several possible disses
             end
 
-            StylishCombat.displayStyleMeter = false
+            StylishCombat:resetStyleMeter()
+            StylishCombat:resetRank()
         end)
 
         Observe('PlayerPuppet', 'OnHit', function(self, event)
@@ -91,83 +82,52 @@ function StylishCombat:new()
 
             if entEntity.GetEntityID(self).hash == entEntity.GetEntityID(Game.GetPlayer()).hash then
                 -- Player was hit
-                StylishCombat.styleRankPercentage = StylishCombat.styleRankPercentage - basePercentageIncrease
+                StylishCombat.styleRankPercentage = StylishCombat.styleRankPercentage - (basePercentageIncrease + StylishCombat.styleRank.rank)
 
-                local changedRank = false
-                if StylishCombat.styleRankPercentage <= 0 then
-                    changedRank = StylishCombat:previousRank()
-                end
-
-                if changedRank then
-                    StylishCombat.styleRankPercentage = 100 + StylishCombat.styleRankPercentage
-                else
-                    StylishCombat.styleRankPercentage = 0
+                if StylishCombat.styleRankPercentage < 0 and StylishCombat:previousRank() then
+                    StylishCombat.styleRankPercentage = StylishCombat.styleRankPercentage + 100
                 end
             end
 
             if entEntity.GetEntityID(Game.GetPlayer()).hash == entEntity.GetEntityID(event.attackData:GetInstigator()).hash then
                 -- Player hit someone
-                StylishCombat.styleRankPercentage = StylishCombat.styleRankPercentage + (basePercentageIncrease * StylishCombat.repetitionModifier * StylishCombat.actionModifier)
+                StylishCombat.styleRankPercentage = StylishCombat.styleRankPercentage + ((basePercentageIncrease + styleRankMax - StylishCombat.styleRank.rank) * StylishCombat.repetitionModifier * StylishCombat.actionModifier)
 
-                local changedRank = false
-                if StylishCombat.styleRankPercentage > 100 then
-                    changedRank = StylishCombat:nextRank()
-                end
-
-                if changedRank then
-                    StylishCombat.styleRankPercentage = 0
-                else
-                    StylishCombat.styleRankPercentage = 100
+                if StylishCombat.styleRankPercentage > 100 and StylishCombat:nextRank() then
+                    StylishCombat.styleRankPercentage = StylishCombat.styleRankPercentage - 100
                 end
             end
         end)
 
+        Observe('PlayerPupper', 'UpdateHealthStateSFX', function(self, event)
+            print("Something to test")
+            print(Dump(event, true))
+        end)
+
         -- Hide on any menu
-        -- OnHit reduce style meter
+        -- Decrease style on (manual) heal
+        -- Decrease style on tick
+        -- Add modifier logic
     end)
 
     registerForEvent("onDraw", function()
         if not StylishCombat.displayStyleMeter then return end
 
         local screenWidth, screenHeight = GetDisplayResolution()
-        local width  = 400 * (screenWidth / 3440)
+        local width  = 420 * (screenWidth / 3440)
         local height = 100 * (screenHeight / 1440)
 
-        ImGui.SetNextWindowPos(screenWidth - (width * 1.25), screenHeight * 0.85 * 0.5, ImGuiCond.Always)
+        ImGui.SetNextWindowPos(screenWidth - (width * 1.20), screenHeight * 0.85 * 0.5, ImGuiCond.Always)
         ImGui.SetNextWindowSize(width, height, ImGuiCond.Appearing)
 
         CPS:setThemeBegin()
 
         if ImGui.Begin("Style Ranking", true, ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove +  ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.NoScrollbar + ImGuiWindowFlags.NoBackground) then
             -- bigger with each level?
-            local fontScale = 2 + (StylishCombat.styleRank * 0.2)
+            local fontScale = 2 + (StylishCombat.styleRank.rank * 0.2)
             ImGui.SetWindowFontScale(fontScale)
 
-            local text = "Dull"
-
-            if StylishCombat.styleRank == 1 then
-                text = "Competent"
-            end
-
-            if StylishCombat.styleRank == 2 then
-                text = "Bonkers"
-            end
-
-            if StylishCombat.styleRank == 3 then
-                text = "Acceptable"
-            end
-
-            if StylishCombat.styleRank == 4 then
-                text = "Super"
-            end
-
-            if StylishCombat.styleRank == 5 then
-                text = "So Stylish"
-            end
-
-            if StylishCombat.styleRank == 6 then
-                text = "SMOKIN' SEXY STYLE"
-            end
+            local text = StylishCombat.styleRank.title
 
             local textSizeX, textSizeY = ImGui.CalcTextSize(text)
 
@@ -183,7 +143,7 @@ function StylishCombat:new()
 
             CPS.colorEnd(1)
 
-            CPS.styleBegin("FrameRounding", 11)
+            CPS.styleBegin("FrameRounding", 13)
 
             -- Needs a style level
             -- Get colour from style level
@@ -210,17 +170,32 @@ function StylishCombat:new()
 end
 
 function StylishCombat:nextRank()
-    local oldRank = self.styleRank
-    self.styleRank = math.min(self.styleRank + 1, styleRankMax)
+    local oldRank = self.styleRank.rank
+    self.styleRank.rank = math.min(self.styleRank.rank + 1, styleRankMax)
+    self.styleRank.title = styleTitles[self.styleRank.rank + 1]
+    self.styleRank.message = styleMessages[self.styleRank.rank + 1]
 
-    return self.styleRank ~= oldRank
+    return self.styleRank.rank ~= oldRank
 end
 
 function StylishCombat:previousRank()
-    local oldRank = self.styleRank
-    self.styleRank = math.max(self.styleRank - 1, 0)
+    local oldRank = self.styleRank.rank
+    self.styleRank.rank = math.max(self.styleRank.rank - 1, 0)
+    self.styleRank.title = styleTitles[self.styleRank.rank + 1]
+    self.styleRank.message = styleMessages[self.styleRank.rank + 1]
 
-    return self.styleRank ~= oldRank
+    return self.styleRank.rank ~= oldRank
+end
+
+function StylishCombat:resetRank()
+    self.styleRank.rank = 0
+    self.styleRank.title = styleTitles[self.styleRank.rank + 1]
+    self.styleRank.message = styleMessages[self.styleRank.rank + 1]
+end
+
+function StylishCombat:resetStyleMeter()
+    self.styleRankPercentage = 0
+    self.displayStyleMeter = false
 end
 
 return StylishCombat:new()
