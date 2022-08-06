@@ -1,4 +1,5 @@
 local GameHUD = require("cet-kit/GameHUD")
+local GameUI = require("cet-kit/GameUI")
 
 local styleRankMax = 6
 local basePercentageIncrease = 15
@@ -30,11 +31,11 @@ local styleMessages = {
 }
 
 local styleDisses = {
-    "You've done poorly",
     "You suck",
-    "Damn you're bad",
+    "Damn, you're bad",
     "Welp...",
-    "Yawn"
+    "Yawn",
+    "Yikes..."
 }
 
 StyleRank = {
@@ -45,6 +46,7 @@ StyleRank = {
 
 StylishCombat = {
     description = "Stylish combat meter",
+    active = false,
     displayStyleMeter = false,
     styleRankPercentage = 0,
     repetitionModifier = 1,
@@ -58,13 +60,23 @@ function StylishCombat:new()
 
         GameHUD.Initialize()
 
+        GameUI.Observe(function(state)
+            StylishCombat:setDisplay(
+                StylishCombat:isActive() and
+                (state.isDefault or state.isScanner) and
+                not state.isMenu and
+                not state.isPopup and
+                not state.isLoading
+            )
+        end)
+
         Observe('PlayerPuppet', 'OnCombatStateChanged', function(self, newState)
             if newState == 1 then
                 GameHUD.ShowWarning(styleInitMessage, styleInitMessageDuration)
-                StylishCombat:display()
+                StylishCombat:start()
             end
 
-            if StylishCombat:isDisplaying() and newState == 2 then
+            if StylishCombat:isActive() and newState == 2 then
                 GameHUD.ShowWarning(StylishCombat.styleRank.message, styleEndMessageDuration)
                 StylishCombat:reset()
             end
@@ -75,7 +87,7 @@ function StylishCombat:new()
         end)
 
         Observe('PlayerPuppet', 'OnDeath', function(self, event)
-            if StylishCombat:isDisplaying() then
+            if StylishCombat:isActive() then
                 GameHUD.ShowWarning(styleDisses[math.random(1, #styleDisses)], styleDissDuration)
             end
 
@@ -116,8 +128,6 @@ function StylishCombat:new()
             end
         end)
 
-        -- TODO Hide on any menu
-        -- TODO hide on `isMenu`, `isPopup`, move element up on `isScanner`
         -- TODO Decrease style on tick
         -- TODO Add modifier logic
     end)
@@ -129,7 +139,10 @@ function StylishCombat:new()
         local width  = 420 * (screenWidth / 3440)
         local height = 100 * (screenHeight / 1440)
 
-        ImGui.SetNextWindowPos(screenWidth - (width * 1.20), screenHeight * 0.85 * 0.5, ImGuiCond.Always)
+        local positionX = screenWidth - (width * 1.20)
+        local positionY = screenHeight * 0.85 * 0.5
+
+        ImGui.SetNextWindowPos(positionX, positionY, ImGuiCond.Always)
         ImGui.SetNextWindowSize(width, height, ImGuiCond.Appearing)
 
         CPS:setThemeBegin()
@@ -205,7 +218,7 @@ end
 
 function StylishCombat:resetStyleMeter()
     self.styleRankPercentage = 0
-    self.displayStyleMeter = false
+    self:setDisplay(false)
 end
 
 function StylishCombat:reduceStyle(amount)
@@ -253,16 +266,31 @@ function StylishCombat:baseDecrease()
 end
 
 function StylishCombat:reset()
+    self:setActive(false)
+    self:setDisplay(false)
     self:resetStyleMeter()
     self:resetRank()
 end
 
-function StylishCombat:display()
-    self.displayStyleMeter = true
+function StylishCombat:setDisplay(value)
+    self.displayStyleMeter = value
 end
 
 function StylishCombat:isDisplaying()
-    return self.displayStyleMeter
+    return self.displayStyleMeter == true
+end
+
+function StylishCombat:setActive(value)
+    self.active = value
+end
+
+function StylishCombat:isActive()
+    return self.active == true
+end
+
+function StylishCombat:start()
+    self:setActive(true)
+    self:setDisplay(true)
 end
 
 return StylishCombat:new()
