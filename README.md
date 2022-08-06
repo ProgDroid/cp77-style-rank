@@ -17,6 +17,5 @@ Extract into Cyber Engine Tweaks mod folder:
 
 ## To Do
 
-- Style meter to tick down
 - Hook style meter gain to different actions (e.g. headshots, wall bounced shots)
 - Buffs and bonuses based on style rank + skill tree

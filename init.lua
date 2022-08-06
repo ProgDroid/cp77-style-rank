@@ -2,10 +2,14 @@ local GameHUD = require("cet-kit/GameHUD")
 local GameUI = require("cet-kit/GameUI")
 
 local styleRankMax = 6
+
 local basePercentageIncrease = 15
 local basePercentageDecrease = 12
+local baseTickReduction = 3
+
 local styleHealFactor = 0.5
 local styleSelfDamageFactor = 1.5
+
 local styleInitMessage = "Time to prove your worth"
 local styleInitMessageDuration = 3
 local styleDissDuration = 2
@@ -52,7 +56,8 @@ StylishCombat = {
     styleRankPercentage = 0,
     repetitionModifier = 1,
     actionModifier = 1,
-    styleRank = StyleRank
+    styleRank = StyleRank,
+    paused = false
 }
 
 function StylishCombat:new()
@@ -62,13 +67,14 @@ function StylishCombat:new()
         GameHUD.Initialize()
 
         GameUI.Observe(function(state)
-            StylishCombat:setDisplay(
-                StylishCombat:isActive() and
+            local hideAndPause = StylishCombat:isActive() and
                 (state.isDefault or state.isScanner) and
                 not state.isMenu and
                 not state.isPopup and
                 not state.isLoading
-            )
+
+            StylishCombat:setDisplay(hideAndPause)
+            StylishCombat:setPaused(not hideAndPause)
         end)
 
         Observe('PlayerPuppet', 'OnCombatStateChanged', function(self, newState)
@@ -97,6 +103,8 @@ function StylishCombat:new()
         end)
 
         Observe('PlayerPuppet', 'OnHit', function(self, event)
+            -- TODO check if NPC and check if already dead wasAliveBeforeHit
+            -- TODO check weapon type and add rate of fire modifier
             if self == nil or
                 event == nil or
                 event.attackData == nil or
@@ -129,7 +137,6 @@ function StylishCombat:new()
             end
         end)
 
-        -- TODO Decrease style on tick
         -- TODO Add modifier logic
     end)
 
@@ -188,6 +195,12 @@ function StylishCombat:new()
         ImGui.End()
 
         CPS:setThemeEnd()
+    end)
+
+    registerForEvent('onUpdate', function(delta)
+        if StylishCombat:isActive() and not StylishCombat:isPaused() then
+            StylishCombat:tick(delta)
+        end
     end)
 
     return StylishCombat
@@ -296,6 +309,23 @@ end
 function StylishCombat:start()
     self:setActive(true)
     self:setDisplay(true)
+    self:setPaused(false)
+end
+
+function StylishCombat:baseTickReduction()
+    return baseTickReduction + ((self.styleRank.rank / styleRankMax) * 10)
+end
+
+function StylishCombat:tick(delta)
+    self:reduceStyle(delta * self:baseTickReduction())
+end
+
+function StylishCombat:setPaused(value)
+    self.paused = value
+end
+
+function StylishCombat:isPaused()
+    return self.paused == true
 end
 
 return StylishCombat:new()
