@@ -7,6 +7,8 @@ local healStyleFactor = 0.7
 local styleInitMessage = "Time to prove your worth"
 local styleInitMessageDuration = 3
 local styleDissDuration = 2
+local styleEndMessageDuration = 5
+
 local styleTitles = {
     "Dull",
     "Competent",
@@ -58,13 +60,13 @@ function StylishCombat:new()
 
         Observe('PlayerPuppet', 'OnCombatStateChanged', function(self, newState)
             if newState == 1 then
-                StylishCombat:display()
                 GameHUD.ShowWarning(styleInitMessage, styleInitMessageDuration)
+                StylishCombat:display()
             end
 
             if StylishCombat:isDisplaying() and newState == 2 then
+                GameHUD.ShowWarning(StylishCombat.styleRank.message, styleEndMessageDuration)
                 StylishCombat:reset()
-                GameHUD.ShowWarning(StylishCombat.styleRank.message, 5)
             end
 
             if newState ~= 1 then
