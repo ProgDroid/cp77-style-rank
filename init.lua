@@ -4,7 +4,8 @@ local GameUI = require("cet-kit/GameUI")
 local styleRankMax = 6
 local basePercentageIncrease = 15
 local basePercentageDecrease = 12
-local healStyleFactor = 0.7
+local styleHealFactor = 0.5
+local styleSelfDamageFactor = 1.5
 local styleInitMessage = "Time to prove your worth"
 local styleInitMessageDuration = 3
 local styleDissDuration = 2
@@ -105,23 +106,23 @@ function StylishCombat:new()
             end
 
             if entEntity.GetEntityID(self).hash == entEntity.GetEntityID(Game.GetPlayer()).hash then
-                StylishCombat:tookDamage()
-            end
-
-            if entEntity.GetEntityID(Game.GetPlayer()).hash == entEntity.GetEntityID(event.attackData:GetInstigator()).hash then
+                if entEntity.GetEntityID(Game.GetPlayer()).hash == entEntity.GetEntityID(event.attackData:GetInstigator()).hash then
+                    StylishCombat:tookSelfDamage()
+                else
+                    StylishCombat:tookDamage()
+                end
+            elseif entEntity.GetEntityID(Game.GetPlayer()).hash == entEntity.GetEntityID(event.attackData:GetInstigator()).hash then
                 StylishCombat:dealtDamage()
             end
         end)
 
-        Observe('PlayerPuppet', 'UpdateHealthStateSFX', function(self, event)
+        Observe('PlayerPuppet', 'OnHealthUpdateEvent', function(self, event)
             if self == nil or
                 event == nil or
                 event.healthDifference == nil or
-                event.healthDifference <= 1 then -- Do not punish player for having auto heal
+                event.healthDifference <= 1 then -- Do not punish player for having passive healing
                     return
             end
-
-            StylishCombat:healed()
 
             if entEntity.GetEntityID(self).hash == entEntity.GetEntityID(Game.GetPlayer()).hash then
                 StylishCombat:healed()
@@ -246,11 +247,15 @@ function StylishCombat:increaseStyle(amount)
 end
 
 function StylishCombat:healed()
-    self:reduceStyle(self:baseDecrease() * healStyleFactor)
+    self:reduceStyle(self:baseDecrease() * styleHealFactor)
 end
 
 function StylishCombat:tookDamage()
     self:reduceStyle(self:baseDecrease())
+end
+
+function StylishCombat:tookSelfDamage()
+    self:reduceStyle(self:baseDecrease() * styleSelfDamageFactor)
 end
 
 function StylishCombat:dealtDamage()
