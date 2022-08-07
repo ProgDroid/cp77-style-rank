@@ -9,6 +9,7 @@ local baseTickReduction = 3
 
 local styleHealFactor = 0.5
 local styleSelfDamageFactor = 1.5
+local styleExecutionFactor = 1.2
 
 local styleInitMessage = "Time to prove your worth"
 local styleInitMessageDuration = 3
@@ -103,7 +104,6 @@ function StylishCombat:new()
         end)
 
         Observe('PlayerPuppet', 'OnHit', function(self, event)
-            -- TODO check if NPC and check if already dead wasAliveBeforeHit
             -- TODO check weapon type and add rate of fire modifier
             if self == nil or
                 event == nil or
@@ -113,14 +113,22 @@ function StylishCombat:new()
                     return
             end
 
-            if entEntity.GetEntityID(self).hash == entEntity.GetEntityID(Game.GetPlayer()).hash then
-                if entEntity.GetEntityID(Game.GetPlayer()).hash == entEntity.GetEntityID(event.attackData:GetInstigator()).hash then
+            if self:IsPlayer() then
+                if event.attackData:GetInstigator():IsPlayer() then
                     StylishCombat:tookSelfDamage()
                 else
                     StylishCombat:tookDamage()
                 end
-            elseif entEntity.GetEntityID(Game.GetPlayer()).hash == entEntity.GetEntityID(event.attackData:GetInstigator()).hash then
-                StylishCombat:dealtDamage()
+            elseif event.attackData:GetInstigator():IsPlayer() then
+                if self:IsDead() or self:IsFriendlyTowardsPlayer() then
+                    return
+                end
+
+                if self:IsIncapacitated() then
+                    StylishCombat:executed()
+                else
+                    StylishCombat:dealtDamage()
+                end
             end
         end)
 
@@ -272,11 +280,15 @@ function StylishCombat:tookSelfDamage()
 end
 
 function StylishCombat:dealtDamage()
-    self:increaseStyle(self:baseIncrease() * self.repetitionModifier * self.actionModifier)
+    self:increaseStyle(self:baseIncrease())
+end
+
+function StylishCombat:executed()
+    self:increaseStyle(self:baseIncrease() * styleExecutionFactor)
 end
 
 function StylishCombat:baseIncrease()
-    return basePercentageIncrease + styleRankMax - self.styleRank.rank
+    return (basePercentageIncrease + styleRankMax - self.styleRank.rank)  * self.repetitionModifier * self.actionModifier
 end
 
 function StylishCombat:baseDecrease()
