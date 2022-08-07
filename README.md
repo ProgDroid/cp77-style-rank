@@ -2,6 +2,9 @@
 
 DMC/Ultrakill inspired mod that adds a Style Rank system in Cyberpunk 2077
 
+Click the thumbnail below to see the latest version of the mod in action
+[![Showcase of current version](https://i.ytimg.com/vi/rsPF2f2BhGY/maxresdefault.jpg)](https://www.youtube.com/watch?v=rsPF2f2BhGY)
+
 ## Requirements
 
 - A copy of Cyberpunk 2077
