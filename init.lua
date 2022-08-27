@@ -7,9 +7,12 @@ local basePercentageIncrease = 15
 local basePercentageDecrease = 12
 local baseTickReduction = 3
 
-local styleHealFactor = 0.5
+local styleHealFactor = 0.75
 local styleSelfDamageFactor = 1.5
 local styleExecutionFactor = 1.2
+local styleHitNpcFactor = 1.25
+local styleSurpriseFactor = 1.1
+local styleBossFactor = 1.5
 
 local styleInitMessage = "Time to prove your worth"
 local styleInitMessageDuration = 3
@@ -79,7 +82,6 @@ StylishCombat = {
     displayStyleMeter = false,
     styleRankPercentage = 0,
     repetitionModifier = 1,
-    actionModifier = 1,
     styleRank = StyleRank,
     paused = false
 }
@@ -128,7 +130,6 @@ function StylishCombat:new()
 
         Observe('PlayerPuppet', 'OnHit', function(self, event)
             -- TODO check weapon type and add rate of fire modifier
-            -- TODO check if enemy is "hostile"? This won't give any style points for hitting the enemy to start combat though`
             if self == nil or
                 event == nil or
                 event.attackData == nil or
@@ -137,22 +138,37 @@ function StylishCombat:new()
                     return
             end
 
+            local factor = 1
+
             if self:IsPlayer() then
                 if event.attackData:GetInstigator():IsPlayer() then
-                    StylishCombat:tookSelfDamage()
-                else
-                    StylishCombat:tookDamage()
+                    factor = StylishCombat:factorSelfDamage(factor)
                 end
+
+                StylishCombat:tookDamage(factor)
             elseif event.attackData:GetInstigator():IsPlayer() then
-                if self:IsDead() or self:IsFriendlyTowardsPlayer() then
+                if self:IsDead() then
                     return
                 end
 
-                if self:IsIncapacitated() then
-                    StylishCombat:executed()
-                else
-                    StylishCombat:dealtDamage()
+                if self:IsVendor() or self:IsCrowd() then
+                    StylishCombat:hitNPC()
+                    return
                 end
+
+                if not self:IsHostile() then
+                    factor = StylishCombat:factorSurprise(factor)
+                end
+
+                if self:IsBoss() then
+                    factor = StylishCombat:factorBoss(factor)
+                end
+
+                if self:IsIncapacitated() then
+                    factor = StylishCombat:factorExecution(factor)
+                end
+
+                StylishCombat:dealtDamage(factor)
             end
         end)
 
@@ -287,6 +303,7 @@ function StylishCombat:increaseStyle(amount)
     if self.styleRankPercentage > 100 then
         if self:nextRank() then
             self.styleRankPercentage = self.styleRankPercentage - 100
+            GameHUD.ShowMessage(StylishCombat.styleRank.title)
         else
             self.styleRankPercentage = 100
         end
@@ -297,24 +314,36 @@ function StylishCombat:healed()
     self:reduceStyle(self:baseDecrease() * styleHealFactor)
 end
 
-function StylishCombat:tookDamage()
-    self:reduceStyle(self:baseDecrease())
+function StylishCombat:tookDamage(factor)
+    self:reduceStyle(self:baseDecrease() * factor)
 end
 
-function StylishCombat:tookSelfDamage()
-    self:reduceStyle(self:baseDecrease() * styleSelfDamageFactor)
+function StylishCombat:dealtDamage(factor)
+    self:increaseStyle(self:baseIncrease() * factor)
 end
 
-function StylishCombat:dealtDamage()
-    self:increaseStyle(self:baseIncrease())
+function StylishCombat:factorSelfDamage(factor)
+    return factor * styleSelfDamageFactor
 end
 
-function StylishCombat:executed()
-    self:increaseStyle(self:baseIncrease() * styleExecutionFactor)
+function StylishCombat:factorExecution(factor)
+    return factor * styleExecutionFactor
+end
+
+function StylishCombat:factorSurprise(factor)
+    return factor * styleSurpriseFactor
+end
+
+function StylishCombat:factorBoss(factor)
+    return factor * styleBossFactor
+end
+
+function StylishCombat:hitNPC()
+    self:reduceStyle(self:baseDecrease() * styleHitNpcFactor)
 end
 
 function StylishCombat:baseIncrease()
-    return (basePercentageIncrease + styleRankMax - self.styleRank.rank)  * self.repetitionModifier * self.actionModifier
+    return (basePercentageIncrease + styleRankMax - self.styleRank.rank)  * self.repetitionModifier
 end
 
 function StylishCombat:baseDecrease()
