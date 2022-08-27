@@ -26,6 +26,27 @@ local styleTitles = {
     "SMOKIN' SEXY STYLE"
 }
 
+local styleBackgroundColours = {
+    "#000000", -- Dull
+    "#0c1817", -- Competent
+    "#256265", -- Badass
+    "#411312", -- Amazing
+    "#655519", -- Super
+    "#655519", -- Shmoovin'
+    "#655519", -- SMOKIN' SEXY STYLE
+}
+
+local styleColours = {
+    "#10141c", -- Dull
+    "#254c4b", -- Competent
+    "#5ef6ff", -- Badass
+    "#db433f", -- Amazing
+    "#ffd740", -- Super
+    "#ffe340", -- Shmooving'
+    "#fffc40", -- SMOKIN' SEXY STYLE
+}
+
+
 local styleMessages = {
     "You've done poorly",
     "You've done OK",
@@ -47,7 +68,9 @@ local styleDisses = {
 StyleRank = {
     rank = 0,
     title = styleTitles[1],
-    message = styleMessages[1]
+    message = styleMessages[1],
+    background = styleBackgroundColours[1],
+    colour = styleColours[1]
 }
 
 StylishCombat = {
@@ -105,6 +128,7 @@ function StylishCombat:new()
 
         Observe('PlayerPuppet', 'OnHit', function(self, event)
             -- TODO check weapon type and add rate of fire modifier
+            -- TODO check if enemy is "hostile"? This won't give any style points for hitting the enemy to start combat though`
             if self == nil or
                 event == nil or
                 event.attackData == nil or
@@ -184,10 +208,8 @@ function StylishCombat:new()
 
             CPS.styleBegin("FrameRounding", 13)
 
-            -- TODO Needs a style level
-            -- TODO Get colour from style level
-            CPS.colorBegin("FrameBg", 0x9926214A)
-            CPS.colorBegin("PlotHistogram", 0xE64547C7)
+            CPS.colorBegin("FrameBg", StylishCombat.styleRank.background)
+            CPS.colorBegin("PlotHistogram", StylishCombat.styleRank.colour)
 
             ImGui.SetCursorPos(0, ImGui.GetFontSize() * 1.6)
 
@@ -214,11 +236,17 @@ function StylishCombat:new()
     return StylishCombat
 end
 
+function StylishCombat:setRankValues()
+    self.styleRank.title = styleTitles[self.styleRank.rank + 1]
+    self.styleRank.message = styleMessages[self.styleRank.rank + 1]
+    self.styleRank.background = styleBackgroundColours[self.styleRank.rank + 1]
+    self.styleRank.colour = styleColours[self.styleRank.rank + 1]
+end
+
 function StylishCombat:nextRank()
     local oldRank = self.styleRank.rank
     self.styleRank.rank = math.min(self.styleRank.rank + 1, styleRankMax)
-    self.styleRank.title = styleTitles[self.styleRank.rank + 1]
-    self.styleRank.message = styleMessages[self.styleRank.rank + 1]
+    self:setRankValues()
 
     return self.styleRank.rank ~= oldRank
 end
@@ -226,16 +254,14 @@ end
 function StylishCombat:previousRank()
     local oldRank = self.styleRank.rank
     self.styleRank.rank = math.max(self.styleRank.rank - 1, 0)
-    self.styleRank.title = styleTitles[self.styleRank.rank + 1]
-    self.styleRank.message = styleMessages[self.styleRank.rank + 1]
+    self:setRankValues()
 
     return self.styleRank.rank ~= oldRank
 end
 
 function StylishCombat:resetRank()
     self.styleRank.rank = 0
-    self.styleRank.title = styleTitles[self.styleRank.rank + 1]
-    self.styleRank.message = styleMessages[self.styleRank.rank + 1]
+    self:setRankValues()
 end
 
 function StylishCombat:resetStyleMeter()
