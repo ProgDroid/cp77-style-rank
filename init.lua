@@ -14,6 +14,24 @@ local styleHitNpcFactor = 1.25
 local styleSurpriseFactor = 1.1
 local styleBossFactor = 1.5
 
+-- Per-event multipliers applied to the base style change. Pure functions of the
+-- running factor, so they are plain locals rather than methods.
+local function factorSelfDamage(factor)
+    return factor * styleSelfDamageFactor
+end
+
+local function factorExecution(factor)
+    return factor * styleExecutionFactor
+end
+
+local function factorSurprise(factor)
+    return factor * styleSurpriseFactor
+end
+
+local function factorBoss(factor)
+    return factor * styleBossFactor
+end
+
 local styleInitMessage = "Time to prove your worth"
 local styleInitMessageDuration = 3
 local styleDissDuration = 2
@@ -68,7 +86,7 @@ local styleDisses = {
     "Yikes..."
 }
 
-StyleRank = {
+local StyleRank = {
     rank = 0,
     title = styleTitles[1],
     message = styleMessages[1],
@@ -76,7 +94,7 @@ StyleRank = {
     colour = styleColours[1]
 }
 
-StylishCombat = {
+local StylishCombat = {
     description = "Stylish combat meter",
     active = false,
     displayStyleMeter = false,
@@ -86,9 +104,24 @@ StylishCombat = {
     paused = false
 }
 
-function StylishCombat:new()
+-- CP Styling supplies the ImGui theming the meter is drawn with. It is a separate
+-- mod, so it may simply not be installed; `enabled` keeps us dormant if so rather
+-- than erroring on every frame.
+local CPS
+local enabled = false
+
+function StylishCombat.new()
     registerForEvent("onInit", function ()
-        CPS = GetMod("CPStyling"):New()
+        local styling = GetMod("CPStyling")
+
+        if styling == nil then
+            print("[Style Rank] CP Styling is not installed, so Style Rank will stay disabled.")
+            print("[Style Rank] See the Requirements section of the Style Rank README.")
+            return
+        end
+
+        CPS = styling:New()
+        enabled = true
 
         GameHUD.Initialize()
 
@@ -103,7 +136,7 @@ function StylishCombat:new()
             StylishCombat:setPaused(not hideAndPause)
         end)
 
-        Observe('PlayerPuppet', 'OnCombatStateChanged', function(self, newState)
+        Observe('PlayerPuppet', 'OnCombatStateChanged', function(_, newState)
             if newState == 1 then
                 GameHUD.ShowWarning(styleInitMessage, styleInitMessageDuration)
                 StylishCombat:start()
@@ -119,7 +152,7 @@ function StylishCombat:new()
             end
         end)
 
-        Observe('PlayerPuppet', 'OnDeath', function(self, event)
+        Observe('PlayerPuppet', 'OnDeath', function()
             if StylishCombat:isActive() then
                 GameHUD.ShowWarning(styleDisses[math.random(1, #styleDisses)], styleDissDuration)
             end
@@ -142,7 +175,7 @@ function StylishCombat:new()
 
             if self:IsPlayer() then
                 if event.attackData:GetInstigator():IsPlayer() then
-                    factor = StylishCombat:factorSelfDamage(factor)
+                    factor = factorSelfDamage(factor)
                 end
 
                 StylishCombat:tookDamage(factor)
@@ -157,15 +190,15 @@ function StylishCombat:new()
                 end
 
                 if not self:IsHostile() then
-                    factor = StylishCombat:factorSurprise(factor)
+                    factor = factorSurprise(factor)
                 end
 
                 if self:IsBoss() then
-                    factor = StylishCombat:factorBoss(factor)
+                    factor = factorBoss(factor)
                 end
 
                 if self:IsIncapacitated() then
-                    factor = StylishCombat:factorExecution(factor)
+                    factor = factorExecution(factor)
                 end
 
                 StylishCombat:dealtDamage(factor)
@@ -189,7 +222,7 @@ function StylishCombat:new()
     end)
 
     registerForEvent("onDraw", function()
-        if not StylishCombat:isDisplaying() then return end
+        if not enabled or not StylishCombat:isDisplaying() then return end
 
         local screenWidth, screenHeight = GetDisplayResolution()
         local width  = 420 * (screenWidth / 3440)
@@ -203,7 +236,13 @@ function StylishCombat:new()
 
         CPS:setThemeBegin()
 
-        if ImGui.Begin("Style Ranking", true, ImGuiWindowFlags.NoResize + ImGuiWindowFlags.NoMove +  ImGuiWindowFlags.NoTitleBar + ImGuiWindowFlags.NoScrollbar + ImGuiWindowFlags.NoBackground) then
+        local windowFlags = ImGuiWindowFlags.NoResize
+            + ImGuiWindowFlags.NoMove
+            + ImGuiWindowFlags.NoTitleBar
+            + ImGuiWindowFlags.NoScrollbar
+            + ImGuiWindowFlags.NoBackground
+
+        if ImGui.Begin("Style Ranking", true, windowFlags) then
             local fontScale = 2 + (StylishCombat.styleRank.rank * 0.2)
             ImGui.SetWindowFontScale(fontScale)
 
@@ -244,7 +283,7 @@ function StylishCombat:new()
     end)
 
     registerForEvent('onUpdate', function(delta)
-        if StylishCombat:isActive() and not StylishCombat:isPaused() then
+        if enabled and StylishCombat:isActive() and not StylishCombat:isPaused() then
             StylishCombat:tick(delta)
         end
     end)
@@ -303,7 +342,7 @@ function StylishCombat:increaseStyle(amount)
     if self.styleRankPercentage > 100 then
         if self:nextRank() then
             self.styleRankPercentage = self.styleRankPercentage - 100
-            GameHUD.ShowMessage(StylishCombat.styleRank.title)
+            GameHUD.ShowMessage(self.styleRank.title)
         else
             self.styleRankPercentage = 100
         end
@@ -320,22 +359,6 @@ end
 
 function StylishCombat:dealtDamage(factor)
     self:increaseStyle(self:baseIncrease() * factor)
-end
-
-function StylishCombat:factorSelfDamage(factor)
-    return factor * styleSelfDamageFactor
-end
-
-function StylishCombat:factorExecution(factor)
-    return factor * styleExecutionFactor
-end
-
-function StylishCombat:factorSurprise(factor)
-    return factor * styleSurpriseFactor
-end
-
-function StylishCombat:factorBoss(factor)
-    return factor * styleBossFactor
 end
 
 function StylishCombat:hitNPC()
@@ -395,4 +418,4 @@ function StylishCombat:isPaused()
     return self.paused == true
 end
 
-return StylishCombat:new()
+return StylishCombat.new()
