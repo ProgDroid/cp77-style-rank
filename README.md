@@ -41,7 +41,8 @@ per file, and CI fails if the two disagree.
 ./scripts/update-deps.sh --upgrade  # move the pin to upstream HEAD
 ```
 
-A weekly workflow runs `--upgrade` and opens a pull request when upstream moves.
+A weekly workflow runs `--upgrade` and opens a pull request when upstream
+moves. It is not installed yet — see [`docs/ci/`](docs/ci/).
 
 **Do not patch anything under `cet-kit/` in place.** An earlier local fix to
 `GameUI.lua` sat there unreviewed for years and contained a nil dereference.
@@ -52,6 +53,7 @@ Fixes belong upstream; then re-pin.
 ```sh
 luacheck init.lua
 shellcheck scripts/update-deps.sh
+./scripts/update-deps.sh --check
 ```
 
 `.luacheckrc` declares the globals Cyber Engine Tweaks injects, so anything else
