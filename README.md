@@ -67,10 +67,6 @@ shellcheck scripts/update-deps.sh
 undefined is flagged. It excludes `cet-kit/`, which is vendored and verified by
 checksum instead.
 
-Note that CI currently runs `luacheck init.lua`, so it does not cover
-`tools/`. Changing that step to `luacheck .` in `.github/workflows/ci.yml`
-brings the probe under the same gate.
-
 ## To Do
 
 - Hook style meter gain to different actions (e.g. headshots, wall bounced shots)
