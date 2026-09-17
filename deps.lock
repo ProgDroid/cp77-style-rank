@@ -1,0 +1,9 @@
+# Vendored dependencies. Managed by scripts/update-deps.sh -- do not hand-edit
+# the files under cet-kit/; CI verifies them against the checksums below.
+
+repo	psiberx/cp2077-cet-kit
+branch	main
+commit	f64c837e589ffffc030e79ed0123688eb3091098
+
+file	GameUI.lua	cet-kit/GameUI.lua	a72647faf49b2cbc000a05fd2922060ceb07b26cd23e737161d16592185c737f
+file	GameHUD.lua	cet-kit/GameHUD.lua	e25c69f869c5bc0a6ec60b94212e095aa9d2b886f938209b971a2e3131c75777
