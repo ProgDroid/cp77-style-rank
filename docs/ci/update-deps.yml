@@ -1,0 +1,66 @@
+name: Update vendored dependencies
+
+# Opens a pull request when the upstream CET kit moves past the commit pinned in
+# deps.lock, so updating is a review rather than something to remember to do.
+#
+# Requires "Allow GitHub Actions to create and approve pull requests" under
+# Settings -> Actions -> General.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays, 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Move the pin to upstream HEAD
+        run: ./scripts/update-deps.sh --upgrade
+
+      - name: Open a pull request if anything changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet; then
+            echo "Already up to date with upstream; nothing to open."
+            exit 0
+          fi
+
+          commit="$(awk '$1 == "commit" { print $2 }' deps.lock)"
+          branch="deps/cet-kit-${commit:0:12}"
+
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Branch $branch already exists; a pull request is presumably open."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$branch"
+          git add cet-kit deps.lock
+          git commit -m "Update vendored CET kit to ${commit:0:12}"
+          git push -u origin "$branch"
+
+          cat > /tmp/pr-body.md <<EOF
+          Automated update of the modules vendored from
+          [psiberx/cp2077-cet-kit](https://github.com/psiberx/cp2077-cet-kit),
+          now pinned to \`${commit}\`.
+
+          Review the diff under \`cet-kit/\` before merging, and re-test in game:
+          upstream tracks Cyber Engine Tweaks, so a change here can alter UI state
+          handling. See \`docs/compatibility-2x.md\` for what to exercise.
+          EOF
+
+          gh pr create \
+            --title "Update vendored CET kit to ${commit:0:12}" \
+            --body-file /tmp/pr-body.md
