@@ -48,16 +48,28 @@ moves. It is not installed yet — see [`docs/ci/`](docs/ci/).
 `GameUI.lua` sat there unreviewed for years and contained a nil dereference.
 Fixes belong upstream; then re-pin.
 
+### Diagnostics
+
+`tools/style-rank-probe/` is a standalone, read-only CET mod that reports what
+the combat hooks actually receive on the patch you are running. It exists to
+answer the open questions in [`docs/compatibility-2x.md`](docs/compatibility-2x.md)
+with observed values rather than guesses. It changes nothing in game.
+
 ### Linting
 
 ```sh
-luacheck init.lua
+luacheck .
 shellcheck scripts/update-deps.sh
 ./scripts/update-deps.sh --check
 ```
 
 `.luacheckrc` declares the globals Cyber Engine Tweaks injects, so anything else
-undefined is flagged.
+undefined is flagged. It excludes `cet-kit/`, which is vendored and verified by
+checksum instead.
+
+Note that CI currently runs `luacheck init.lua`, so it does not cover
+`tools/`. Changing that step to `luacheck .` in `.github/workflows/ci.yml`
+brings the probe under the same gate.
 
 ## To Do
 
