@@ -19,7 +19,7 @@ jobs:
           sudo luarocks install luacheck
 
       - name: Run luacheck
-        run: luacheck init.lua
+        run: luacheck .
 
   shell:
     name: Lint shell
