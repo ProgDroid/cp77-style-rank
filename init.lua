@@ -63,19 +63,19 @@ local styleColours = {
     "#5ef6ff", -- Badass
     "#db433f", -- Amazing
     "#ffd740", -- Super
-    "#ffe340", -- Shmooving'
+    "#ffe340", -- Shmoovin'
     "#fffc40", -- SMOKIN' SEXY STYLE
 }
 
 
 local styleMessages = {
-    "You've done poorly",
-    "You've done OK",
-    "You've done well",
-    "You've done great",
-    "You've done incredible",
-    "You've done absolutely grand",
-    "You're a beast"
+    "You've done poorly",           -- Dull
+    "You've done OK",               -- Competent
+    "You've done well",             -- Badass
+    "You've done great",            -- Amazing
+    "You've done incredible",       -- Super
+    "You've done absolutely grand", -- Shmoovin'
+    "You're a beast"                -- SMOKIN' SEXY STYLE
 }
 
 local styleDisses = {
