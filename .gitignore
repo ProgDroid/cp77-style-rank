@@ -1,2 +1,5 @@
 *.log
 *.sqlite3
+
+# Serena tooling state, not project source.
+.serena/

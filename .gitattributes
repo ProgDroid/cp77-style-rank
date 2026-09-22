@@ -1,0 +1,18 @@
+# Line endings are pinned because two things here compare bytes, not text.
+#
+# deps.lock stores a SHA-256 per vendored file, computed over the upstream
+# bytes. A Windows checkout with core.autocrlf=true rewrites those files on
+# the way out, so scripts/update-deps.sh --check reports drift on files that
+# never actually changed. CI runs on Linux and never sees it.
+#
+# scripts/update-deps.sh itself parses deps.lock with `read`, which leaves a
+# stray CR on the blank line and aborts with "unrecognised key ''".
+
+* text=auto eol=lf
+
+# Vendored from psiberx/cp2077-cet-kit. Never rewrite these: the checksum in
+# deps.lock is only meaningful against the bytes upstream published.
+cet-kit/** -text
+
+*.sh text eol=lf
+deps.lock text eol=lf
